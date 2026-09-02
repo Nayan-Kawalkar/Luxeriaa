@@ -45,7 +45,7 @@ paint:
 
 | | |
 |---|---|
-| ![The Aurum, a white grand tourer, the room and its 1180S number in warm platinum](docs/aurum.webp) | ![The Solaire, a gold one-off, the room and its 1250G number in amber](docs/solaire.webp) |
+| ![The Aurum, a white grand tourer, the room and its 1180S number in warm platinum](docs/hero.webp) | ![The Solaire, a gold one-off, the room and its 1250G number in amber](docs/solaire.webp) |
 
 ![The Viridian, an open-top in metallic green, the room and its 940T number in the same green](docs/viridian.webp)
 
