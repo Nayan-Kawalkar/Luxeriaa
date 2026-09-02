@@ -1,0 +1,888 @@
+/* ===========================================================================
+   Luxeria — the collection
+   ---------------------------------------------------------------------------
+   Layer order matters more here than anywhere else:
+
+     0  atmosphere   the lit studio, painted in CSS
+     1  hero-type    the vehicle's name, oversized
+     2  stage-canvas transparent WebGL — the model occludes the word above,
+                     and its shadow falls across it
+     3  ui           everything else, floating, pointer-transparent by default
+
+   =========================================================================== */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--bg-deep);
+}
+
+body {
+  font-family: var(--font);
+  font-synthesis-weight: none;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+a { color: inherit; text-decoration: none; }
+ul { list-style: none; margin: 0; padding: 0; }
+p, h1, h2, figure { margin: 0; }
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 5px;
+  border-radius: 1px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The car's paint arrives as `--accent` / `--accent-rgb` on this element, so
+   every token derived from it has to be re-declared here too: a custom property
+   substitutes where it is *declared*, and the copies on `:root` would resolve
+   against the fallback colour rather than against the car's. */
+.app {
+  --accent-soft: rgb(var(--accent-rgb) / 0.16);
+  /* The number takes the lit variant rather than the paint itself: the room is
+     tinted with the same colour, and a dark paint — the red especially — would
+     otherwise sink into its own haze. */
+  --type-bg: var(--accent-lit);
+}
+
+/* --- shell ---------------------------------------------------------------- */
+
+.app {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app.is-locked { cursor: progress; }
+
+/* --- atmosphere ----------------------------------------------------------- */
+
+/* Not a flat panel: a pool of light behind the hero, edges pulled down, and a
+   trace of grain so the wide dark gradients do not band on 8-bit displays. */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(66% 52% at 50% 44%, rgb(var(--accent-rgb) / 0.13), rgb(var(--accent-rgb) / 0) 74%),
+    /* A wash over the whole ground, so the room is the car's colour rather
+       than a neutral box with a coloured lamp in it. */
+    linear-gradient(178deg, rgb(var(--accent-rgb) / 0.04), rgb(var(--accent-rgb) / 0.015)),
+    radial-gradient(120% 62% at 50% 108%, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0) 64%),
+    linear-gradient(178deg, #16191e 0%, #101317 44%, #0b0d10 76%, #060708 100%);
+}
+
+.atmosphere::before,
+.atmosphere::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.atmosphere::before {
+  background: radial-gradient(122% 96% at 50% 46%, rgba(0, 0, 0, 0) 46%, rgba(8, 11, 15, 0.3) 100%);
+}
+
+.atmosphere::after {
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- hero typography ------------------------------------------------------ */
+
+.hero-type {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-type);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.6s var(--ease-out);
+}
+
+/* In the film view the composition steps back and leaves only the vehicle. */
+.app.is-cinematic .hero-type { opacity: 0.14; }
+
+.hero-type__word {
+  font-family: var(--font-display);
+  font-size: calc(var(--fs-hero-type) * var(--type-scale, 1));
+  font-weight: 800;
+  line-height: 0.78;
+  letter-spacing: -0.045em;
+  color: var(--type-bg);
+  /* Set low in the frame, the way the reference lands its baseline against the
+     wheels rather than centring the word on the composition. */
+  transform: translateY(var(--hero-type-baseline));
+  will-change: transform, opacity;
+}
+
+/* --- canvas --------------------------------------------------------------- */
+
+.stage-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-canvas);
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  /* Stops a rotate gesture from being stolen by the browser as a page scroll. */
+  touch-action: none;
+  outline-offset: -2px;
+}
+
+.stage-canvas.is-grabbing { cursor: grabbing; }
+
+/* --- ui shell ------------------------------------------------------------- */
+
+.ui {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-ui);
+  pointer-events: none;
+}
+
+/* On desktop the panels are placed against the composition, so the wrapper
+   simply gets out of the way. */
+.sheet { display: contents; }
+.stage-gap { display: none; }
+
+.ui a,
+.ui button { pointer-events: auto; }
+
+/* --- header --------------------------------------------------------------- */
+
+/* Menu left, marque centred, sections right. The brand is centred against the
+   frame rather than against whatever the flex row leaves it, so it stays put
+   as the sections change length. */
+.header {
+  position: absolute;
+  top: var(--page-top);
+  left: var(--page-x);
+  right: var(--page-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header__brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42em;
+  font-size: var(--fs-brand);
+  font-weight: 700;
+  line-height: 1;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.header__brand:hover { opacity: 0.72; }
+.header__brand-mark { width: 0.8em; height: 0.8em; color: var(--accent); }
+.header__brand-name {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.header__sections {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(16px, 2vw, 38px);
+}
+
+.header__section-link {
+  font-size: var(--fs-nav);
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.header__section-link:hover { color: var(--text); }
+
+/* --- menu button ---------------------------------------------------------- */
+
+.menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 30px;
+  height: 22px;
+}
+
+.menu-button__lines {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 12px;
+}
+
+.menu-button__lines i {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 1.6px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: transform 0.42s var(--ease-out), opacity 0.24s linear, width 0.42s var(--ease-out);
+}
+
+.menu-button__lines i:nth-child(1) { top: 0; }
+.menu-button__lines i:nth-child(2) { top: 5.2px; }
+.menu-button__lines i:nth-child(3) { top: 10.4px; }
+
+.menu-button:hover .menu-button__lines i:nth-child(2) { width: 68%; }
+
+.menu-button.is-open .menu-button__lines i:nth-child(1) { transform: translateY(5.2px) rotate(45deg); }
+.menu-button.is-open .menu-button__lines i:nth-child(2) { opacity: 0; }
+.menu-button.is-open .menu-button__lines i:nth-child(3) { transform: translateY(-5.2px) rotate(-45deg); }
+
+/* --- the band ------------------------------------------------------------- */
+
+/* Figures, name and card sit on one line across the foot of the frame. The
+   name takes the middle and the outer two hold the corners, so the car above
+   is free to use the full width. */
+.sheet {
+  position: absolute;
+  left: var(--page-x);
+  right: var(--page-x);
+  bottom: var(--page-bottom);
+  display: grid;
+  grid-template-columns: minmax(150px, 15%) 1fr minmax(190px, 21%);
+  align-items: end;
+  gap: clamp(20px, 3vw, 64px);
+}
+
+.sheet__stats { justify-self: start; }
+.sheet__info { justify-self: center; }
+.sheet__preview { justify-self: end; }
+
+/* --- headline figures ----------------------------------------------------- */
+
+.stats {
+  margin: 0;
+  display: grid;
+  gap: clamp(14px, 2.4vh, 30px);
+}
+
+.stat__value {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.3em;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 2.5vw, 48px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.stat__unit {
+  font-family: var(--font);
+  font-size: 0.32em;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.stat__label {
+  margin-top: 0.55em;
+  padding-top: 0.55em;
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--fs-utility);
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+}
+
+/* --- name and story ------------------------------------------------------- */
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 2vw, 40px);
+}
+
+.info__title {
+  margin: 0;
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4.4vw, 84px);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.info__body {
+  margin: 0;
+  max-width: 44ch;
+  font-size: var(--fs-body);
+  line-height: 1.62;
+  color: var(--text-dim);
+}
+
+/* --- preview card and call to action -------------------------------------- */
+
+.preview {
+  display: grid;
+  gap: clamp(10px, 1.4vh, 16px);
+  width: clamp(180px, 20vw, 300px);
+}
+
+.preview__card {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(78% 76% at 50% 24%, rgb(var(--accent-rgb) / 0.22), rgb(var(--accent-rgb) / 0) 72%),
+    linear-gradient(168deg, #1b1917 0%, #121110 60%, #090909 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.preview__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The still is a whole frame of the scene, so the car within it sits small,
+     central and lit for a full-size stage. Cropping in on it and lifting it a
+     little is what makes the card read as a card rather than a screenshot. */
+  object-position: center 44%;
+  transform: scale(2.1);
+  filter: brightness(1.18) contrast(1.06) saturate(1.05);
+}
+
+.preview__placeholder {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.16);
+}
+
+/* Centred on the card, the way a still that can be played always is. Glass
+   rather than a solid fill, so the frame underneath still reads. */
+.preview__play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 30%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(12, 10, 9, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(7px) saturate(120%);
+  -webkit-backdrop-filter: blur(7px) saturate(120%);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    transform 0.44s var(--ease-out),
+    background-color 0.44s var(--ease-out),
+    border-color 0.44s var(--ease-out);
+}
+
+.preview__play svg {
+  width: 34%;
+  height: 34%;
+  /* Optically centred: a triangle's mass sits behind its point. */
+  transform: translateX(6%);
+}
+
+.preview__card:hover .preview__play,
+.preview__play:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #14100c;
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.preview__play:active { transform: translate(-50%, -50%) scale(1); }
+.preview__play:disabled { opacity: 0.45; cursor: default; }
+
+/* The still steps back a little while the control is under the pointer. */
+.preview__card:hover .preview__image { filter: brightness(0.94) contrast(1.06) saturate(1.05); }
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7em;
+  padding: clamp(11px, 1.5vh, 16px) clamp(16px, 1.6vw, 26px);
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #14100c;
+  font-size: var(--fs-utility);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background-color 0.36s var(--ease-out),
+    transform 0.36s var(--ease-out);
+}
+
+.cta svg { width: 1.15em; height: 1.15em; }
+.cta:hover { background: var(--accent-lit); transform: translateY(-1px); }
+.cta:active { transform: translateY(0); }
+.cta:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+/* --- menu overlay --------------------------------------------------------- */
+
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  clip-path: inset(0% 0% 100% 0%);
+  background:
+    radial-gradient(78% 60% at 22% 34%, rgb(var(--accent-rgb) / 0.13), rgb(var(--accent-rgb) / 0) 68%),
+    linear-gradient(178deg, #121519 0%, #0d0f13 62%, #08090b 100%);
+  pointer-events: none;
+}
+
+.menu.is-open { pointer-events: auto; }
+
+/* The header rides above the overlay: the same button that opened the menu
+   becomes the one that closes it, which is the whole point of the mark. */
+.app.is-menu-open .ui { z-index: calc(var(--z-overlay) + 1); }
+
+/* --- car indicators ------------------------------------------------------- */
+
+.indicators {
+  position: absolute;
+  right: var(--page-x);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.indicators__list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  justify-items: end;
+}
+
+.indicator {
+  display: block;
+  width: 26px;
+  height: 12px;
+  position: relative;
+  cursor: pointer;
+}
+
+.indicator::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 14px;
+  height: 1.5px;
+  background: var(--line-soft);
+  transition:
+    width 0.42s var(--ease-out),
+    background-color 0.42s var(--ease-out);
+}
+
+.indicator:hover::after { width: 20px; background: var(--text-muted); }
+.indicator.is-active::after { width: 26px; background: var(--accent); }
+.indicator.is-pending::after { opacity: 0.45; }
+
+/* Opacity is GSAP's to animate; the stylesheet only takes the pointers away. */
+.app.is-menu-open .indicators,
+.app.is-menu-open .sheet,
+.app.is-menu-open .footer {
+  pointer-events: none;
+}
+
+.menu__inner {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--page-top) + 8vh) var(--page-x) var(--page-bottom);
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 26%);
+  grid-template-rows: 1fr auto;
+  gap: 6vh 6vw;
+  /* Both columns hang from the same baseline, the way the composition on the
+     main screen hangs its rails off shared anchors. */
+  align-items: end;
+}
+
+.menu__nav { grid-column: 1; grid-row: 1; align-self: end; }
+.menu__nav ul { display: grid; gap: 0.1em; }
+.menu__item-mask { display: block; overflow: hidden; padding-bottom: 0.06em; }
+
+.menu__item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.34em;
+  /* Sized against the height as well as the width. The reference listed three
+     projects and could size purely off the viewport width; five have to fit
+     between the label and the bottom of a short window too. */
+  font-size: min(clamp(32px, 6.4vw, 108px), 11vh);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  text-align: left;
+  transition: color 0.4s var(--ease-out), transform 0.5s var(--ease-out);
+}
+
+.menu__item-index {
+  font-size: 0.19em;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.4s var(--ease-out);
+}
+
+.menu__item:hover { color: var(--accent); transform: translateX(0.035em); }
+.menu__item:hover .menu__item-index { color: var(--accent); }
+.menu__item.is-active { color: var(--accent); }
+.menu__item.is-active .menu__item-index { color: var(--accent); }
+
+.menu__label {
+  font-size: var(--fs-nav);
+  color: var(--text-dim);
+  margin-bottom: 2.2em;
+}
+
+.menu__aside {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  display: grid;
+  gap: 2.6em;
+}
+
+.menu__facts { margin: 0; display: grid; gap: 1.15em; }
+
+.menu__fact {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.1em 1em;
+  padding-bottom: 1.15em;
+  border-bottom: 1px solid var(--line-faint);
+  font-size: var(--fs-utility);
+}
+
+.menu__fact dt {
+  grid-column: 1;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.menu__fact dd {
+  grid-column: 1;
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.menu__fact dd.menu__fact-year {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.menu__contact {
+  font-size: var(--fs-statement);
+  font-weight: 500;
+  color: var(--text);
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 0.35em;
+  justify-self: start;
+  transition: color 0.35s var(--ease-out), border-color 0.35s var(--ease-out);
+}
+
+.menu__contact:hover { color: var(--accent); border-color: var(--accent); }
+
+.menu__sign {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: 2vh;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8em;
+  font-size: var(--fs-utility);
+  color: var(--text-dim);
+}
+
+.menu__sign-mark { width: 1.05em; height: 1.05em; color: var(--accent); }
+
+/* --- cinematic ------------------------------------------------------------ */
+
+.cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cinematic.is-open { pointer-events: none; }
+.cinematic.is-open .cinematic__close { pointer-events: auto; }
+
+.cinematic__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #050607;
+}
+
+.cinematic__bar--top { top: 0; transform-origin: top center; }
+.cinematic__bar--bottom { bottom: 0; transform-origin: bottom center; }
+
+.cinematic__caption {
+  position: absolute;
+  left: var(--page-x);
+  bottom: calc(11vh + var(--page-bottom));
+  display: flex;
+  align-items: baseline;
+  gap: 1em;
+  font-size: var(--fs-utility);
+}
+
+.cinematic__index { color: var(--accent); font-variant-numeric: tabular-nums; }
+.cinematic__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.cinematic__year { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+.cinematic__close {
+  position: absolute;
+  right: var(--page-x);
+  bottom: calc(11vh + var(--page-bottom));
+  font-size: var(--fs-utility);
+  font-weight: 500;
+  padding: 0.6em 0;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.cinematic__close:hover { color: var(--accent); }
+
+/* --- loader --------------------------------------------------------------- */
+
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-loader);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(178deg, #14171b 0%, #0d0f12 62%, #070809 100%);
+  transition: opacity 0.9s var(--ease-out), visibility 0s linear 0.9s;
+}
+
+.loader.is-done { opacity: 0; visibility: hidden; }
+
+.loader__inner {
+  display: grid;
+  justify-items: center;
+  gap: 1.4em;
+  font-size: var(--fs-brand);
+}
+
+.loader__mark { width: 1.1em; height: 1.1em; }
+
+.loader__word {
+  font-family: var(--font-display);
+  font-size: 1em;
+  font-weight: 400;
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;
+  text-transform: uppercase;
+}
+
+.loader__track {
+  width: clamp(120px, 13vw, 190px);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+.loader__bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.5s var(--ease-out);
+}
+
+/* ===========================================================================
+   Responsive
+   ---------------------------------------------------------------------------
+   Not a shrunk desktop. Below 900px the composition re-forms: the vehicle keeps
+   the upper half of the frame (the camera lifts it there rather than the model
+   getting smaller), and the copy stacks into a sheet underneath it.
+   =========================================================================== */
+
+@media (max-width: 1180px) {
+  .header__sections { gap: 14px; }
+  .sheet { grid-template-columns: minmax(120px, 18%) 1fr minmax(150px, 22%); }
+}
+
+@media (max-width: 900px) and (max-aspect-ratio: 13/10) {
+  .ui {
+    display: flex;
+    flex-direction: column;
+    padding: var(--page-top) var(--page-x) var(--page-bottom);
+    gap: 12px;
+  }
+
+  /* Everything placed against the desktop composition returns to flow and is
+     re-ordered into the portrait reading sequence. */
+  .header,
+  .indicators,
+  .sheet {
+    position: static;
+    inset: auto;
+    transform: none;
+    width: auto;
+  }
+
+  .header { order: 0; gap: 16px; }
+  .header__brand { position: static; transform: none; }
+  .header__sections { display: none; }
+
+  .indicators { order: 1; }
+  .indicators__list { grid-auto-flow: column; justify-items: center; gap: 10px; }
+  .indicator { width: 16px; height: 16px; }
+  .indicator::after { right: 1px; width: 10px; }
+  .indicator.is-active::after { width: 14px; }
+
+  /* The number belongs to the car, so it moves up with it rather than sitting
+     behind the copy where it would only fight for attention. */
+  .hero-type { bottom: 42%; }
+
+  /* Reserved for the car; the camera lifts the model into this band. */
+  .stage-gap { display: block; order: 2; flex: 1 1 auto; min-height: 26vh; }
+
+  /* The band becomes a stack: name, then figures beside the card. */
+  .sheet {
+    order: 3;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 16px 18px;
+    padding: 20px 0 2px;
+    /* Its own ground, so copy is never read off the bodywork. */
+    background: linear-gradient(
+      180deg,
+      rgba(11, 11, 12, 0) 0%,
+      rgba(11, 11, 12, 0.88) 12%,
+      rgba(11, 11, 12, 0.96) 26%,
+      rgba(11, 11, 12, 0.98) 100%
+    );
+    box-shadow: 0 -30px 40px 20px rgba(11, 11, 12, 0.5);
+  }
+
+  .sheet__info { grid-column: 1 / -1; grid-row: 1; justify-self: start; }
+  .info { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .sheet__stats { grid-column: 1; grid-row: 2; }
+  .sheet__preview { grid-column: 2; grid-row: 2; }
+
+  .stats { grid-auto-flow: column; gap: 22px; }
+  .info__body { margin-left: 0; margin-right: 0; }
+  .preview { width: clamp(132px, 34vw, 190px); }
+  .preview__card { display: none; }
+
+  .menu__inner {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    align-content: center;
+    align-items: start;
+    gap: 4vh 0;
+    padding-top: calc(var(--page-top) + 4vh);
+  }
+  .menu__nav { grid-column: 1; grid-row: 1; align-self: start; }
+  .menu__aside { grid-column: 1; grid-row: 2; align-self: start; gap: 1.8em; }
+  .menu__facts { display: none; }
+  .menu__sign { grid-row: 3; }
+  .menu__label { margin-bottom: 1.4em; }
+}
+
+@media (max-width: 560px) and (max-aspect-ratio: 13/10) {
+  .info__body {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .header__brand-mark { width: 0.7em; height: 0.7em; }
+}
+
+/* Short landscape phones: the band holds, but there is no height for the card
+   and the description has to be cut rather than run under the figures. */
+@media (orientation: landscape) and (max-height: 480px) {
+  .preview__card { display: none; }
+  .header__sections { display: none; }
+  .info__body {
+    margin-top: 0.6em;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .indicator::after { transition: none; }
+}
