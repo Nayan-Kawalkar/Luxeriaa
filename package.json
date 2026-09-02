@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "optimize": "node scripts/optimize-models.mjs"
+    "optimize": "node scripts/optimize-models.mjs",
+    "shots": "node tools/capture.mjs tools/shots.json"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.1.0",

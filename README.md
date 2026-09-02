@@ -4,6 +4,8 @@ Five cars presented as a single immersive screen: a dark room lit in the car's
 own colour, its model number set enormous behind it, and the car itself
 rendered in front in real time.
 
+![Luxeria — the Vermilion, a red track special standing in a dark room lit red, its model number 980R filling the frame behind it](docs/hero.webp)
+
 Three.js draws the car into a **transparent** canvas that sits above the page's
 typography layer, so the model genuinely occludes the number behind it and its
 shadow genuinely falls across the digits. Nothing about the layering is faked,
@@ -37,6 +39,16 @@ generated mesh, lit and drawn in the browser at whatever frame rate the machine
 can hold, and anyone opening the page can drag it around and look at it from
 wherever they like.
 
+Every image in this document is a screenshot of the running page, taken by
+`npm run shots`. Three of the five, each recolouring the room from its own
+paint:
+
+| | |
+|---|---|
+| ![The Aurum, a white grand tourer, the room and its 1180S number in warm platinum](docs/aurum.webp) | ![The Solaire, a gold one-off, the room and its 1250G number in amber](docs/solaire.webp) |
+
+![The Viridian, an open-top in metallic green, the room and its 940T number in the same green](docs/viridian.webp)
+
 ## Getting around
 
 | | |
@@ -51,6 +63,7 @@ wherever they like.
 ## Layout
 
 ```
+docs/                     the screenshots in this file
 src/
   App.jsx                 which car is current, and every way of changing it
   data/vehicles.js        THE COLLECTION — copy, figures, framing, model number
@@ -67,7 +80,14 @@ src/
     tokens.css            every colour, size and page inset
     app.css               layout only
 scripts/optimize-models.mjs   source GLBs -> public/models
+tools/capture.mjs             `npm run shots` — drives a real Chrome and
+                              screenshots each entry in tools/shots.json
 ```
+
+`npm run shots` runs **headful on purpose**: headless Chrome falls back to
+SwiftShader, which renders this scene at about a frame a minute. GSAP's clock is
+driven by those frames, so the entrance never plays and every shot comes out an
+empty room. `SHOT_DIR` chooses the output directory, `CHROME_PATH` the browser.
 
 **Adding a car** is one entry in `src/data/vehicles.js` — including its `paint`,
 which the whole page recolours itself from — one in

@@ -117,14 +117,7 @@ export function buildIntro(q, reduced) {
       duration: scaled(DUR.long, reduced),
       ease: EASE.out,
       stagger: reduced ? 0 : STAGGER,
-    }, 0.3)
-    .fromTo(q('[data-anim="foot"]'), { y: 16, opacity: 0 }, {
-      y: 0,
-      opacity: 1,
-      duration: scaled(DUR.base, reduced),
-      ease: EASE.out,
-      stagger: reduced ? 0 : STAGGER * 0.8,
-    }, 0.42);
+    }, 0.3);
 
   return timeline;
 }

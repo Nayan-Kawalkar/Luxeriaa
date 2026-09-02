@@ -34,17 +34,25 @@ const server = await createServer({ server: { port: PORT, strictPort: false } })
 await server.listen();
 const base = server.resolvedUrls.local[0].replace(/\/$/, '');
 
+/**
+ * Headful by default, and not for convenience: headless falls back to
+ * SwiftShader, which renders this scene at about one frame a minute. GSAP's
+ * clock is driven by those frames, so the entrance never plays and every shot
+ * comes out as an empty room. Set HEADLESS=1 if you have a machine where
+ * software rendering is fast enough to be worth it.
+ */
+const headless = process.env.HEADLESS === '1';
+
 const browser = await puppeteer.launch({
   executablePath: CHROME,
-  headless: 'new',
+  headless: headless ? 'new' : false,
   args: [
     '--no-sandbox',
-    '--enable-unsafe-swiftshader',
-    '--use-gl=angle',
-    '--use-angle=swiftshader',
-    '--ignore-gpu-blocklist',
     '--hide-scrollbars',
     '--force-device-scale-factor=1',
+    ...(headless
+      ? ['--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist']
+      : []),
   ],
 });
 
@@ -90,6 +98,14 @@ for (const shot of shots) {
     waitUntil: shot.until ?? 'networkidle2',
     timeout: 60000,
   });
+  // Headless renders on SwiftShader, which is slow enough that a fixed delay is
+  // a guess. Wait for the curtain to have lifted, then settle for the entrance.
+  await page
+    .waitForFunction(() => document.querySelector('.app')?.classList.contains('is-ready'), {
+      timeout: shot.readyTimeout ?? 180000,
+      polling: 500,
+    })
+    .catch(() => issues.push(`${shot.name}: never became ready`));
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r())));
   await new Promise((r) => setTimeout(r, shot.wait ?? 9000));
 

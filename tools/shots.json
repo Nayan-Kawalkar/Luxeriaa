@@ -4,7 +4,7 @@
     "path": "/#/vermilion",
     "width": 1600,
     "height": 900,
-    "wait": 16000,
+    "wait": 7000,
     "until": "load"
   },
   {
@@ -12,7 +12,7 @@
     "path": "/#/aurum",
     "width": 1600,
     "height": 900,
-    "wait": 16000,
+    "wait": 7000,
     "until": "load"
   },
   {
@@ -20,7 +20,7 @@
     "path": "/#/viridian",
     "width": 1600,
     "height": 900,
-    "wait": 16000,
+    "wait": 7000,
     "until": "load"
   },
   {
@@ -28,7 +28,7 @@
     "path": "/#/solaire",
     "width": 1600,
     "height": 900,
-    "wait": 16000,
+    "wait": 7000,
     "until": "load"
   }
 ]
