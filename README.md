@@ -4,7 +4,7 @@ Five cars presented as a single immersive screen: a dark room lit in the car's
 own colour, its model number set enormous behind it, and the car itself
 rendered in front in real time.
 
-![Luxeria — the Vermilion, a red track special standing in a dark room lit red, its model number 980R filling the frame behind it](docs/hero.webp)
+![Luxeria — the Vermilion, a red track special standing in a dark room lit red, its model number 980R filling the frame behind it](docs/aurum.webp)
 
 Three.js draws the car into a **transparent** canvas that sits above the page's
 typography layer, so the model genuinely occludes the number behind it and its
