@@ -6,11 +6,24 @@
  * process means the run is self-contained and repeatable.
  */
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { createServer } from 'vite';
 import puppeteer from 'puppeteer-core';
 
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+/** First Chrome that actually exists here; override with CHROME_PATH. */
+const CHROME = process.env.CHROME_PATH ?? [
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
+].find((candidate) => existsSync(candidate));
+
+if (!CHROME) {
+  console.error('No Chrome found. Set CHROME_PATH to the executable.');
+  process.exit(1);
+}
 const OUT = process.env.SHOT_DIR || './shots';
 const shots = JSON.parse(await fs.readFile(process.argv[2] ?? 'tools/shots.json', 'utf8'));
 

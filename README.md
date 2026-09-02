@@ -24,6 +24,19 @@ npm approve-scripts --allow-scripts-pending
 
 ---
 
+## How this was made
+
+The five cars started as design images gathered and generated on Pinterest.
+Each image was turned into a 3D model with [Tripo](https://www.tripo3d.ai/),
+which is what every `.glb` in `public/models` is an optimised export of. The
+site around them — the studio, the framing, the material work, the transitions
+and this document — was built with **Claude Opus 5**.
+
+So nothing here is photography or a pre-rendered still: the car on screen is the
+generated mesh, lit and drawn in the browser at whatever frame rate the machine
+can hold, and anyone opening the page can drag it around and look at it from
+wherever they like.
+
 ## Getting around
 
 | | |
@@ -74,8 +87,10 @@ one in `MATERIAL_CONFIG`. Nothing else knows how many cars there are.
 **61 MB → 23.3 MB**, all five preloaded, with no visible loss at the framing the
 page actually uses.
 
-The sources are Tripo exports living one directory above this one: single mesh,
-single material, 4K atlases and ~1.9 M triangles each. `optimize-models.mjs`
+The sources are the raw Tripo exports, living one directory above this one, and
+they carry everything an image-to-3D generator produces: a single mesh, a single
+material, 4K atlases and ~1.9 M triangles each — beautiful to look at and far
+too heavy to ship. `optimize-models.mjs`
 resizes the atlases per material slot, decimates to a quarter of the triangle
 count, welds and prunes, and re-encodes geometry as `EXT_meshopt_compression`.
 
